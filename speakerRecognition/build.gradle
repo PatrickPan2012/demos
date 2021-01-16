@@ -1,0 +1,28 @@
+plugins {
+	id 'org.sonarqube' version '2.6.2'
+}
+
+plugins {
+	// Apply the java plugin to add support for Java
+	id 'war'
+	id 'eclipse'
+}
+
+dependencies {
+	compile 'org.slf4j:slf4j-api:1.7.25'
+	compile 'ch.qos.logback:logback-classic:1.2.3'
+	compile 'org.json:json:20180130'
+	compile 'org.apache.httpcomponents:httpclient:4.5.5'
+	
+	providedCompile 'javax.servlet:javax.servlet-api:3.1.0'
+
+	// Use JUnit test framework
+	testCompile 'junit:junit:4.12'
+}
+
+// In this section you declare where to find the dependencies of your project
+repositories {
+	// Use jcenter for resolving your dependencies.
+	// You can declare any Maven/Ivy/file repository here.
+	jcenter()
+}
