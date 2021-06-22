@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>智能客服</title>
+<script type="text/javascript" src="js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		(function() {
+			const defaultVal = '请用一句话准确描述您的问题，例如：“网银如何支付”'
+
+			let textarea = $("#input");
+			textarea.focus(function() {
+				let currentVal = textarea.val()
+				if (defaultVal == currentVal) {
+					textarea.val("")
+					textarea.removeClass("font-color-grey")
+				}
+			})
+			textarea.blur(function() {
+				let currentVal = textarea.val()
+				if (!currentVal) {
+					textarea.val(defaultVal)
+					textarea.addClass("font-color-grey")
+				}
+			})
+
+			let length = $("#length")
+			let questions = $("#questions")
+			const maxLength = 25
+			textarea.bind('input propertychange', 'textarea', function() {
+				let restLength = maxLength - textarea.val().length
+				length.html(restLength)
+
+				if (textarea.val()) {
+					// 客户在文本输入框中输入问题，页面将问题实时回传到系统，系统对问题进行分词，然后根据分词的结果在客服中心知识库中搜索相关问题，接着返回相关度较高且点击数较高的前 5 个问题。
+					$.get("/questions", {
+						input : textarea.val()
+					}, function(array) {
+						question.each(function(index, element) {
+							$(element).html(array[index])
+						})
+					}, "json")
+					questions.css("display", "block")
+				} else {
+					questions.css("display", "none")
+				}
+			})
+
+			function getDatetime(){
+				let date=new Date()
+				return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`
+			}
+			
+			// 将客户问题发送到后台系统
+			let dashline = $("#dash")
+			let chat=$("#chat")
+			function getAnswer(user_input) {
+				dashline.css("display", "block")
+				chat.append(`
+					<p>
+						<span><b style="color: #ffa500;">&nbsp;&nbsp;&nbsp;&nbsp;访客：</b></span>
+						<span class="font-color-grey">(${getDatetime()})</span>
+					</p>
+					<p>
+						<span class="font-color-blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${user_input}</span>
+					</p>
+				`)
+				
+				textarea.val(defaultVal)
+				textarea.addClass("font-color-grey")
+				length.html(maxLength)
+
+				questions.css("display", "none")
+				$.get("/answer", {
+					question : user_input
+				}, function(obj) {
+					let answer=obj.answer
+					if(""==answer){
+						answer="非常抱歉，我暂时无法回答您的这个问题。"
+					}
+					
+					chat.append(`
+						<p>
+							<span><b style="color: #346fbb">&nbsp;&nbsp;&nbsp;&nbsp;智能小宝：</b></span><span
+								class="font-color-grey">(${getDatetime()})</span>
+						</p>
+						<p>
+							<span class="font-color-blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${answer}</span>
+						</p>	
+					`)
+					
+				}, "json")
+			}
+
+			$("#send").click(function() {
+				if (!textarea.val()||""==textarea.val().trim()||defaultVal==textarea.val()) {
+					return;
+				}
+
+				getAnswer(textarea.val())
+			})
+
+			let question = $(".question")
+			question.click(function() {
+				// 客户选择其中一个问题
+				let text = $(this).html()
+				// 系统根据该问题，在客服中心知识库中搜索答案
+				getAnswer(text)
+
+				$.ajax({
+					url : "/count",
+					type : "PUT",
+					data : {
+						question : text
+					}
+				})
+			})
+		})()
+	})
+</script>
+<style type="text/css">
+body {
+	margin: 0;
+	width: 100vw;
+	height: 100vh;
+	display: flex;
+}
+
+.background-color-blue {
+	background: #cff0f7;
+}
+
+.background-color-white {
+	background: #ffffff;
+}
+
+.container {
+	padding: 0.5vh 0.5vw 0 0.5vw;
+}
+
+.tool {
+	display: inline-block;
+	width: 11vw;
+	text-align: center;
+	padding: 0.2vh 0;
+}
+
+.button {
+	cursor: pointer;
+}
+
+.font-color-grey {
+	color: #808080;
+}
+
+.font-color-blue {
+	color: #0000ff;
+}
+
+.question {
+	cursor: pointer;
+}
+
+.chat-width {
+	width: 73vw;
+}
+</style>
+</head>
+<body>
+	<div style="width: 80vw; height: 80vh; margin: auto;">
+		<div>
+			<span class="background-color-blue"
+				style="display: inline-block; width: 8vw; text-align: center; border-radius: 8px 8px 0 0; padding: 1vh 1vw;"><b>智能客服</b></span>
+		</div>
+		<div class="container background-color-blue"
+			style="position: relative;">
+			<div class="background-color-white"
+				style="width: 77vw; height: 53vh; overflow: auto; padding: 0 1vw;">
+				<div id="dash" class="chat-width"
+					style="height: 16vh; border-width: 1px; border-bottom-style: dashed; border-color: #808080; display: none;"></div>
+				<div id="chat" class="chat-width"></div>
+			</div>
+			<div id="questions" class="background-color-white font-color-blue"
+				style="display: none; width: 72vw; position: absolute; bottom: -3vh; left: 3vw; border-width: thin; border-style: solid; border-color: #000000; padding: 0 1vw;">
+				<p class="question"></p>
+				<p class="question"></p>
+				<p class="question"></p>
+				<p class="question"></p>
+				<p class="question"></p>
+			</div>
+		</div>
+		<div class="container background-color-blue">
+			<div style="background: #ebf9f6;">
+				<span class="tool button">折叠答案</span><span class="tool button">清空记录</span><span
+					class="tool button">导出问答记录</span>
+			</div>
+			<div>
+				<textarea id="input" class="font-color-grey"
+					style="border: none; padding: 0.5vh 0.5vw; width: 78vw; resize: none; height: 13vh; outline: none;"
+					maxlength=25>请用一句话准确描述您的问题，例如：“网银如何支付”</textarea>
+			</div>
+		</div>
+		<div class="background-color-blue"
+			style="padding: 0 0.5vw 0.5vh 0.5vw;">
+			<div class="font-color-grey" style="position: relative;">
+				<span>[发送快捷键:Enter]:您还可以输入<span id="length">25</span>个字，请输入简体中文哦
+				</span>
+				<button id="send" class="font-color-grey button"
+					style="position: absolute; right: 0; width: 10vw;">发送</button>
+			</div>
+		</div>
+	</div>
+</body>
+</html>
